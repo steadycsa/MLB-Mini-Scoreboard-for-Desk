@@ -1,4 +1,4 @@
-Wanted a small scoreboard for my desk showing the latest games
+Wanted a small scoreboard for my desk showing the latest games as an attempt to reduce my screen time...
 
 How it works:
 1. MLB Stats API 
