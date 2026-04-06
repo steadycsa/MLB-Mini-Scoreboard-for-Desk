@@ -4,13 +4,14 @@ Polls statsapi.mlb.com every 30 seconds, formats a serial packet,
 and sends it to the Arduino over USB serial.
 
 Install dependencies:
-    pip install pyserial requests
+    pip3 install pyserial requests
 
 Usage:
-    python mlb_serial.py
+    python3 mlb_serial.py
 
-Optional: hardcode your favorite team below so the scoreboard
-defaults to that game on startup without needing the button.
+- Shows all games (live and final)
+- Button on Arduino cycles through every game
+- Favorite team loads first on startup if set
 """
 
 import serial
@@ -23,14 +24,14 @@ from datetime import datetime
 # -------------------------------------------------------
 #  Config
 # -------------------------------------------------------
-BAUD_RATE       = 9600
-POLL_INTERVAL   = 30        # seconds between API calls
-FAVORITE_TEAM   = ""        # e.g. "Cubs", "Yankees" — leave blank to show all live games
-SERIAL_PORT     = ""        # e.g. "COM3" on Windows, "/dev/ttyUSB0" on Linux/Mac
-                            # leave blank to auto-detect
+BAUD_RATE     = 9600
+POLL_INTERVAL = 30      # seconds between API calls
+FAVORITE_TEAM = ""      # e.g. "Cubs" or "NYY" — loads first on startup, leave blank to start at game 1
+SERIAL_PORT   = ""      # e.g. "/dev/cu.usbmodem14101" on Mac, "COM3" on Windows
+                        # leave blank to auto-detect
 
 # -------------------------------------------------------
-#  Auto-detect serial port (looks for Arduino)
+#  Auto-detect serial port
 # -------------------------------------------------------
 def find_arduino_port():
     ports = serial.tools.list_ports.comports()
@@ -39,16 +40,28 @@ def find_arduino_port():
         mfr  = (port.manufacturer or "").lower()
         if "arduino" in desc or "arduino" in mfr or "ch340" in desc or "ftdi" in desc:
             return port.device
-    # Fallback: return first available port
     if ports:
         return ports[0].device
     return None
 
 
 # -------------------------------------------------------
-#  Fetch today's live games from MLB Stats API
+#  Get team abbreviation safely
+#  Falls back to first 3 letters of team name if abbr missing
 # -------------------------------------------------------
-def get_live_games():
+def get_abbr(team_data):
+    team = team_data.get("team", {})
+    abbr = team.get("abbreviation")
+    if abbr:
+        return abbr[:3].upper()
+    name = team.get("name", "???")
+    return name[:3].upper()
+
+
+# -------------------------------------------------------
+#  Fetch today's games (live + final)
+# -------------------------------------------------------
+def get_games():
     today = datetime.now().strftime("%Y-%m-%d")
     url   = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={today}&hydrate=linescore"
 
@@ -63,12 +76,12 @@ def get_live_games():
     games = []
     for date_entry in data.get("dates", []):
         for g in date_entry.get("games", []):
-            status      = g.get("status", {})
-            abstract    = status.get("abstractGameState", "")
-            detailed    = status.get("detailedState", "")
+            status   = g.get("status", {})
+            abstract = status.get("abstractGameState", "")
+            detailed = status.get("detailedState", "")
 
-            # Only include live or recently completed games
-            if abstract not in ("Live", "Final"):
+            # Include live, final, and scheduled/preview games
+            if abstract not in ("Live", "Final", "Preview"):
                 continue
 
             linescore   = g.get("linescore", {})
@@ -76,25 +89,23 @@ def get_live_games():
             away        = teams.get("away", {})
             home        = teams.get("home", {})
 
-            away_abr    = away.get("team", {}).get("abbreviation", "???")
-            home_abr    = home.get("team", {}).get("abbreviation", "???")
-            away_score  = away.get("score", 0)
-            home_score  = home.get("score", 0)
+            away_abr   = get_abbr(away)
+            home_abr   = get_abbr(home)
+            away_score = away.get("score", 0)
+            home_score = home.get("score", 0)
 
             inning      = linescore.get("currentInning", 1)
             inning_half = linescore.get("inningHalf", "Top")
             is_top      = "top" in inning_half.lower()
 
-            offense     = linescore.get("offense", {})
-            defense     = linescore.get("defense", {})
-            balls       = linescore.get("balls", 0)
-            strikes     = linescore.get("strikes", 0)
-            outs        = linescore.get("outs", 0)
+            balls   = linescore.get("balls", 0)
+            strikes = linescore.get("strikes", 0)
+            outs    = linescore.get("outs", 0)
 
             games.append({
-                "away_team"  : away_abr[:3].upper(),
+                "away_team"  : away_abr,
                 "away_score" : away_score,
-                "home_team"  : home_abr[:3].upper(),
+                "home_team"  : home_abr,
                 "home_score" : home_score,
                 "balls"      : balls,
                 "strikes"    : strikes,
@@ -104,6 +115,10 @@ def get_live_games():
                 "status"     : abstract,
                 "detail"     : detailed,
             })
+
+    # Sort: live games first, then final, then upcoming
+    order = {"Live": 0, "Final": 1, "Preview": 2}
+    games.sort(key=lambda g: order.get(g["status"], 3))
 
     return games
 
@@ -127,29 +142,22 @@ def format_packet(game):
 
 
 # -------------------------------------------------------
-#  Find favorite team game, fallback to first live game
+#  Find starting index — favorite team or 0
 # -------------------------------------------------------
-def select_game(games, favorite, current_idx):
-    if not games:
-        return None, 0
-
-    # If a favorite team is set, try to find their game first
-    if favorite:
-        for i, g in enumerate(games):
-            if favorite.upper() in g["away_team"].upper() or \
-               favorite.upper() in g["home_team"].upper():
-                return g, i
-
-    # Otherwise return game at current index (wraps around)
-    idx = current_idx % len(games)
-    return games[idx], idx
+def find_start_index(games, favorite):
+    if not favorite:
+        return 0
+    for i, g in enumerate(games):
+        if favorite.upper() in g["away_team"].upper() or \
+           favorite.upper() in g["home_team"].upper():
+            return i
+    return 0
 
 
 # -------------------------------------------------------
 #  Main loop
 # -------------------------------------------------------
 def main():
-    # Resolve serial port
     port = SERIAL_PORT or find_arduino_port()
     if not port:
         print("[ERROR] No serial port found. Plug in your Arduino or set SERIAL_PORT manually.")
@@ -162,51 +170,59 @@ def main():
         print(f"[ERROR] Could not open serial port: {e}")
         sys.exit(1)
 
-    # Give Arduino time to reset after serial connection
     time.sleep(2)
     print("[INFO] Connected. Starting poll loop...")
 
-    current_game_idx = 0
-    last_poll        = 0
-    games            = []
+    current_idx = 0
+    last_poll   = 0
+    games       = []
 
     while True:
         now = time.time()
 
-        # Check for incoming serial from Arduino (button press)
+        # Check for button press from Arduino
         if ser.in_waiting:
             line = ser.readline().decode("utf-8", errors="ignore").strip()
             if line == "NEXT":
-                current_game_idx += 1
-                print(f"[INFO] Button pressed — switching to game index {current_game_idx}")
-                # Send updated game immediately without waiting for next poll
                 if games:
-                    game, current_game_idx = select_game(games, FAVORITE_TEAM, current_game_idx)
-                    if game:
-                        packet = format_packet(game)
-                        ser.write((packet + "\n").encode("utf-8"))
-                        print(f"[SEND] {packet}")
+                    current_idx = (current_idx + 1) % len(games)
+                    game = games[current_idx]
+                    packet = format_packet(game)
+                    ser.write((packet + "\n").encode("utf-8"))
+                    print(f"[NEXT] Game {current_idx + 1}/{len(games)}: {packet}  ({game['detail']})")
+                else:
+                    print("[INFO] Button pressed but no games loaded yet.")
             elif line == "ACK":
-                pass  # Arduino acknowledged last packet, nothing to do
+                pass
 
         # Poll API on interval
         if now - last_poll >= POLL_INTERVAL:
             last_poll = now
             print(f"[INFO] Polling MLB API at {datetime.now().strftime('%H:%M:%S')}...")
-            games = get_live_games()
+            fresh_games = get_games()
 
-            if not games:
-                print("[INFO] No live or recent games found.")
+            if not fresh_games:
+                print("[INFO] No games found today.")
                 ser.write(b"NOGAMES\n")
             else:
-                print(f"[INFO] {len(games)} game(s) found.")
-                game, current_game_idx = select_game(games, FAVORITE_TEAM, current_game_idx)
-                if game:
-                    packet = format_packet(game)
-                    ser.write((packet + "\n").encode("utf-8"))
-                    print(f"[SEND] {packet}  ({game['detail']})")
+                # On first load set starting index, after that keep current position
+                if not games:
+                    current_idx = find_start_index(fresh_games, FAVORITE_TEAM)
 
-        time.sleep(0.1)  # tight loop with small sleep to stay responsive to button
+                games = fresh_games
+                live_count  = sum(1 for g in games if g["status"] == "Live")
+                final_count = sum(1 for g in games if g["status"] == "Final")
+                print(f"[INFO] {len(games)} game(s): {live_count} live, {final_count} final.")
+
+                # Clamp index in case game count changed
+                current_idx = current_idx % len(games)
+
+                game = games[current_idx]
+                packet = format_packet(game)
+                ser.write((packet + "\n").encode("utf-8"))
+                print(f"[SEND] Game {current_idx + 1}/{len(games)}: {packet}  ({game['detail']})")
+
+        time.sleep(0.1)
 
 
 if __name__ == "__main__":
