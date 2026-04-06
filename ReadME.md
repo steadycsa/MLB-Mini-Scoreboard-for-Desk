@@ -25,7 +25,8 @@ Parts used:
 - 1x 220Ω resistor for the LCD backlight
 
 Wiring:
-- Insert Wiring Phot Here
+- ![Uploading MlB_Scoreboard_WiringV1.jpg…]()
+
 -  Wiring:
     LCD Pin 1  (VSS)  -> GND
     LCD Pin 2  (VDD)  -> 5V
