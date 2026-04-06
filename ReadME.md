@@ -56,4 +56,4 @@ Case (not needed)
 - Inert Case Image Here
 
 Additional Notes:
-- The script can be hardcoded to your favorite team if you dont have a button or dont care about other teams (F the Astros)
+- The script can be hardcoded to your favorite team if you dont have a button or dont care about other teams 
