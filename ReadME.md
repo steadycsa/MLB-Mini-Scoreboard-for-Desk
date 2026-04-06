@@ -18,7 +18,7 @@ How it works:
 
 Parts used:
 - 1x Arduino UNO
-- 1x Cables
+- 13x Cables
 - 1x Display (i used an 16×2 alphanumeric LCD) 
 - 1x pushbuttons to cycle between live games (if you want multiple teams)
 - 1x 10kΩ potentiometer for LCD contrast (required)
