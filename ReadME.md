@@ -25,7 +25,10 @@ Parts used:
 - 1x 220Ω resistor for the LCD backlight
 
 Wiring:
--![MLB Scoreboard](mlb_scoreboardV1.png)
+To be updated once esp32 and other materials arrived but here is the initial concept
+
+
+![MLB Scoreboard](mlb_scoreboardV1.png)
 
 -  Wiring:
     LCD Pin 1  (VSS)  -> GND
