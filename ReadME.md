@@ -1,4 +1,4 @@
-Wanted a small scoreboard for my desk showing the latest games as an attempt to reduce my screen time...
+this inspo came from tiktok bombing me with desk companions using esp32s, dont have one yet so came up with this initial concept using what i had laying around.
 
 How it works:
 1. MLB Stats API 
