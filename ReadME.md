@@ -29,6 +29,7 @@ Wiring:
 
 -  Wiring:
     LCD Pin 1  (VSS)  -> GND
+   <br><br>
     LCD Pin 2  (VDD)  -> 5V
     LCD Pin 3  (V0)   -> Potentiometer wiper (contrast)
     LCD Pin 4  (RS)   -> Arduino pin 12
