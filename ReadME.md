@@ -29,24 +29,34 @@ Wiring:
 
 -  Wiring:
     LCD Pin 1  (VSS)  -> GND
-   <br><br>
+   
     LCD Pin 2  (VDD)  -> 5V
+   
     LCD Pin 3  (V0)   -> Potentiometer wiper (contrast)
+   
     LCD Pin 4  (RS)   -> Arduino pin 12
+   
     LCD Pin 5  (RW)   -> GND
+   
     LCD Pin 6  (EN)   -> Arduino pin 11
+   
     LCD Pin 11 (D4)   -> Arduino pin 5
+   
     LCD Pin 12 (D5)   -> Arduino pin 4
+   
     LCD Pin 13 (D6)   -> Arduino pin 3
+   
     LCD Pin 14 (D7)   -> Arduino pin 2
+   
     LCD Pin 15 (A)    -> 220 ohm resistor -> 5V  (backlight +)
     LCD Pin 16 (K)    -> GND                     (backlight -)
+
     Potentiometer:
       Left leg  -> GND
       Right leg -> 5V
       Wiper     -> LCD Pin 3
 
-  Cycle button:
+    Cycle button:
     One leg -> Arduino pin 7
     Other leg -> GND
     (uses internal pull-up, no resistor needed)
