@@ -64,11 +64,10 @@ To be updated once esp32 and other materials arrived but here is the initial con
     Other leg -> GND
     (uses internal pull-up, no resistor needed)
 
-Case (not needed)
-- Insert Case Description Here
-- Feel free to use the same one or come up with your own
-- Inert Case Image Here
+Case Details
+- I plan on adding an image and cad file of the case here, decided to not do it for this first version using the arduino
+- Feel free to use the same one or come up with your own!
 
 Additional Notes:
 - The script can be hardcoded to your favorite team if you dont have a button or dont care about other teams
-- Will be creating a V2 of this using an esp32 as an attempt to make this pocket-sized
+- Will be creating a V2 of this using an esp32 and other components as an attempt to make this truly pocket-sized
