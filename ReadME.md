@@ -1,4 +1,4 @@
-this inspo came from tiktok bombing me with desk companions using esp32s, dont have one yet so came up with this initial concept using what i had laying around.
+tiktok algorithim has been bombing me with mini desk companions using esp32s, dont have one yet so came up with this initial concept using what i had laying around.
 
 How it works:
 1. MLB Stats API 
